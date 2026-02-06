@@ -1,0 +1,22 @@
+﻿# Build
+bin/
+obj/
+
+# Rider
+.idea/
+*.sln.iml
+
+# User settings
+*.user
+*.DotSettings.user
+
+# Logs
+*.log
+
+# VSCode
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+s
