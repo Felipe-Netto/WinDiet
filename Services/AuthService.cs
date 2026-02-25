@@ -56,22 +56,78 @@ public class AuthService(AppDbContext db, IConfiguration configuration)
         return ci;
     }
 
-    public async Task<ServiceResult<User>> Register(RegisterDTO data, Roles role = Roles.Client)
+    public async Task<ServiceResult<User>> RegisterProfessional(RegisterProfessionalDTO data)
     {
         if (await db.Users.AnyAsync(u => u.Email == data.Email))
-        {
             return ServiceResult<User>.Fail("Esse email já está registrado.");
+
+        if (await db.Professionals.AnyAsync(p => p.CRN == data.CRN))
+            return ServiceResult<User>.Fail("Este CRN já está em uso.");
+
+        using var transaction = await db.Database.BeginTransactionAsync();
+
+        try
+        {
+            var hashedPassword = HashPassword(data.Password);
+
+            var newUser = new User(data.Name, data.Email, hashedPassword);
+            newUser.Role = Roles.Professional;
+
+            db.Users.Add(newUser);
+            await db.SaveChangesAsync();
+
+            var newProfessional = new Professional(newUser.Id, data.CRN, data.Specialty, data.Bio);
+
+            db.Professionals.Add(newProfessional);
+            await db.SaveChangesAsync();
+
+            await transaction.CommitAsync();
+
+            return ServiceResult<User>.Ok(newUser);
         }
+        catch (Exception e)
+        {
+            await transaction.RollbackAsync();
+            return ServiceResult<User>.Fail("Erro interno ao registrar profissional: " + e.Message);
+        }
+    }
 
-        var hashedPassword = HashPassword(data.Password);
+    public async Task<ServiceResult<User>> RegisterPatient(RegisterPatientDTO data, Guid userId)
+    {
+        var professional = await db.Professionals.FirstOrDefaultAsync(p => p.UserId == userId);
 
-        var newUser = new User(data.Name, data.Email, hashedPassword);
-        newUser.Role = role;
+        if (professional == null)
+            return ServiceResult<User>.Fail("Profissional não encontrado para o usuário logado.");
+        
+        if (await db.Users.AnyAsync(u => u.Email == data.Email))
+            return ServiceResult<User>.Fail("Esse email já está registrado.");
 
-        db.Users.Add(newUser);
-        await db.SaveChangesAsync();
+        using var transaction = await db.Database.BeginTransactionAsync();
 
-        return ServiceResult<User>.Ok(newUser);
+        try
+        {
+            var hashedPassword = HashPassword(data.Password);
+
+            var newUser = new User(data.Name, data.Email, hashedPassword);
+
+            db.Users.Add(newUser);
+            await db.SaveChangesAsync();
+
+            var newPatient = new Patient(newUser.Id, userId, data.BirthDate, data.Gender, data.Height,
+                data.TargetWeight, data.Observations);
+
+            db.Patients.Add(newPatient);
+            await db.SaveChangesAsync();
+
+            await transaction.CommitAsync();
+
+            return ServiceResult<User>.Ok(newUser);
+        }
+        catch (Exception e)
+        {
+            await transaction.RollbackAsync();
+            return ServiceResult<User>.Fail("Erro interno ao registrar profissional: " + e.Message);
+        }
     }
 
     public async Task<ServiceResult<User>> Login(LoginDTO data)

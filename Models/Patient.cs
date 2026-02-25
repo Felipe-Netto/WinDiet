@@ -10,13 +10,16 @@ public class Patient
     {
     }
 
-    public Patient(Guid userId, Guid professionalId, DateTime birthDate, Gender gender)
+    public Patient(Guid userId, Guid professionalId, DateTime birthDate, Gender gender, decimal height, decimal targetWeight, String observations = "")
     {
         Id = Guid.NewGuid();
         UserId = userId;
         ProfessionalId = professionalId;
         BirthDate = birthDate;
         Gender = gender;
+        Observations = observations;
+        Height = height;
+        TargetWeight = targetWeight;
         IsActive = true;
         CreatedAt = DateTime.UtcNow;
     }

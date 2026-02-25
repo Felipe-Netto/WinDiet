@@ -7,11 +7,13 @@ public class Professional
     // Construtor para o EF (vazio)
     public Professional() { }
 
-    public Professional(Guid userId, string crn)
+    public Professional(Guid userId, string crn, string specialty, string bio = "")
     {
         Id = Guid.NewGuid();
         UserId = userId;
         CRN = crn;
+        Specialty = specialty;
+        Bio = bio;
         CreatedAt = DateTime.UtcNow;
     }
 

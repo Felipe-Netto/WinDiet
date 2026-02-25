@@ -15,9 +15,9 @@ public static class AuthRoute
         var routeGroup = app.MapGroup("/auth");
 
         routeGroup.MapPost("/register/professional",
-            async (AuthService authService, RegisterDTO data) =>
+            async (AuthService authService, RegisterProfessionalDTO data) =>
             {
-                var result = await authService.Register(data, Roles.Professional);
+                var result = await authService.RegisterProfessional(data);
 
                 if (!result.Success)
                     return Results.Conflict(new { message = result.ErrorMessage });
@@ -26,10 +26,17 @@ public static class AuthRoute
                 return Results.Ok(new { token });
             });
 
-        routeGroup.MapPost("/register/client",
-                async (AuthService authService, RegisterDTO data) =>
+        routeGroup.MapPost("/register/patient",
+                async (AuthService authService, ClaimsPrincipal user, RegisterPatientDTO data) =>
                 {
-                    var result = await authService.Register(data);
+                    var userIdClaim = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                    
+                    if (string.IsNullOrEmpty(userIdClaim)) 
+                        return Results.Unauthorized();
+                    
+                    var loggedInUserId = Guid.Parse(userIdClaim);
+                    
+                    var result = await authService.RegisterPatient(data, loggedInUserId);
 
                     if (!result.Success)
                         return Results.Conflict(new { message = result.ErrorMessage });
@@ -37,7 +44,7 @@ public static class AuthRoute
                     var token = authService.GenerateToken(result.Data!);
                     return Results.Ok(new { token });
                 })
-            .RequireAuthorization(new AuthorizeAttribute { Roles = "Admin" });
+            .RequireAuthorization(new AuthorizeAttribute { Roles = "Professional" });
 
         routeGroup.MapPost("/login", async (AuthService authService, LoginDTO data) =>
         {
