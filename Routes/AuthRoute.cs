@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using WinDiet.Data;
 using WinDiet.DTOs;
+using WinDiet.Enums;
 using WinDiet.Services;
 
 namespace WinDiet.Routes;
@@ -14,9 +15,9 @@ public static class AuthRoute
         var routeGroup = app.MapGroup("/auth");
 
         routeGroup.MapPost("/register/professional",
-            async (AppDbContext db, AuthService authService, RegisterDTO data) =>
+            async (AuthService authService, RegisterDTO data) =>
             {
-                var result = await authService.RegisterProfessional(data, db);
+                var result = await authService.Register(data, Roles.Professional);
 
                 if (!result.Success)
                     return Results.Conflict(new { message = result.ErrorMessage });
@@ -25,13 +26,26 @@ public static class AuthRoute
                 return Results.Ok(new { token });
             });
 
-        routeGroup.MapPost("/login", async (AppDbContext db, AuthService authService, LoginDTO data) =>
+        routeGroup.MapPost("/register/client",
+                async (AuthService authService, RegisterDTO data) =>
+                {
+                    var result = await authService.Register(data);
+
+                    if (!result.Success)
+                        return Results.Conflict(new { message = result.ErrorMessage });
+
+                    var token = authService.GenerateToken(result.Data!);
+                    return Results.Ok(new { token });
+                })
+            .RequireAuthorization(new AuthorizeAttribute { Roles = "Admin" });
+
+        routeGroup.MapPost("/login", async (AuthService authService, LoginDTO data) =>
         {
-            var result = await authService.Login(data, db);
-            
+            var result = await authService.Login(data);
+
             if (!result.Success)
                 return Results.Unauthorized();
-            
+
             var token = authService.GenerateToken(result.Data!);
             return Results.Ok(new { token });
         });
@@ -48,6 +62,6 @@ public static class AuthRoute
 
                 return Results.Ok(userData);
             })
-            .RequireAuthorization(new AuthorizeAttribute { Roles = "Admin"});
+            .RequireAuthorization(new AuthorizeAttribute { Roles = "Admin" });
     }
 }

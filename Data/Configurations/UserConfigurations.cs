@@ -20,5 +20,17 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
 
         builder.HasIndex(u => u.Email)
             .IsUnique();
+        
+        // Configuração do Relacionamento 1:1 com Professional
+        builder.HasOne(u => u.Professional)
+            .WithOne(p => p.User)
+            .HasForeignKey<Professional>(p => p.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // Configuração do Relacionamento 1:1 com Patient
+        builder.HasOne(u => u.Patient)
+            .WithOne(p => p.User)
+            .HasForeignKey<Patient>(p => p.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

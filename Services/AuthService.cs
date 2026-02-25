@@ -11,7 +11,7 @@ using WinDiet.Models;
 
 namespace WinDiet.Services;
 
-public class AuthService(IConfiguration configuration)
+public class AuthService(AppDbContext db, IConfiguration configuration)
 {
     private readonly string _secretKey = configuration["JwtSettings:SecretKey"]
                                          ?? throw new InvalidOperationException(
@@ -19,7 +19,7 @@ public class AuthService(IConfiguration configuration)
 
     public string HashPassword(string password) =>
         BCrypt.Net.BCrypt.HashPassword(password);
-    
+
     public bool VerifyPassword(string password, string hashedPassword) =>
         BCrypt.Net.BCrypt.Verify(password, hashedPassword);
 
@@ -56,7 +56,7 @@ public class AuthService(IConfiguration configuration)
         return ci;
     }
 
-    public async Task<ServiceResult<User>> RegisterProfessional(RegisterDTO data, AppDbContext db)
+    public async Task<ServiceResult<User>> Register(RegisterDTO data, Roles role = Roles.Client)
     {
         if (await db.Users.AnyAsync(u => u.Email == data.Email))
         {
@@ -64,9 +64,9 @@ public class AuthService(IConfiguration configuration)
         }
 
         var hashedPassword = HashPassword(data.Password);
-        
+
         var newUser = new User(data.Name, data.Email, hashedPassword);
-        newUser.Role = Roles.Admin;
+        newUser.Role = role;
 
         db.Users.Add(newUser);
         await db.SaveChangesAsync();
@@ -74,15 +74,15 @@ public class AuthService(IConfiguration configuration)
         return ServiceResult<User>.Ok(newUser);
     }
 
-    public async Task<ServiceResult<User>> Login(LoginDTO data, AppDbContext db)
+    public async Task<ServiceResult<User>> Login(LoginDTO data)
     {
-        User ? user = await db.Users.FirstOrDefaultAsync(u => u.Email == data.Email);
-        
+        User? user = await db.Users.FirstOrDefaultAsync(u => u.Email == data.Email);
+
         if (user == null || !VerifyPassword(data.Password, user.Password))
         {
             return ServiceResult<User>.Fail("Email ou senha inválidos.");
         }
-        
+
         return ServiceResult<User>.Ok(user);
     }
 }
