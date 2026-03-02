@@ -113,7 +113,7 @@ public class AuthService(AppDbContext db, IConfiguration configuration)
             db.Users.Add(newUser);
             await db.SaveChangesAsync();
 
-            var newPatient = new Patient(newUser.Id, userId, data.BirthDate, data.Gender, data.Height,
+            var newPatient = new Patient(newUser.Id, professional.Id, data.BirthDate, data.Gender, data.Height,
                 data.TargetWeight, data.Observations);
 
             db.Patients.Add(newPatient);
@@ -126,7 +126,7 @@ public class AuthService(AppDbContext db, IConfiguration configuration)
         catch (Exception e)
         {
             await transaction.RollbackAsync();
-            return ServiceResult<User>.Fail("Erro interno ao registrar profissional: " + e.Message);
+            return ServiceResult<User>.Fail("Erro interno ao registrar paciente: " + e.Message);
         }
     }
 
